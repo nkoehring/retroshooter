@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <title>retroshooter</title>
+    <script src="retroshooter.js"></script>
+    <style>
+      body { background:black; color:white; }
+      canvas { display:block; margin:5em auto; border:1px solid red; }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" width="400" height="480">
+    <script>
+      var canvas = document.getElementById("canvas")
+      if (canvas.getContext){  
+        var ctx = canvas.getContext('2d')
+        run(ctx)
+      } else {  
+        console.log("no canvas :(")
+        document.write("Please use a modern browser.")
+      }  
+    </script>
+  </body>
+</html>
+
