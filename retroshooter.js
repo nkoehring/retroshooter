@@ -50,14 +50,24 @@ function draw_player(ship) {
 
 function run(ctx) {
   var enemies = [],
-      player = new Ship(200, 470, "player")
+      player = new Ship(200, 470, "player"),
+      lvl = 0,
+      lvlIndicator = document.getElementById('level'),
+      enemyIndicator = document.getElementById('enemies')
+
+  function obsolet(element, index, array) {
+    return (element.y <= 480);
+  }
 
   function generateEnemies() {
     r = Math.random()
-    x = r*400 % 380
+    x = Math.random()*400 % 380
 
-    if (r > 0.2) enemies.push(new Ship(x, -20))
+    if (r > 0.1) enemies.push(new Ship(x, -20))
     else enemies.push(new Ship(x, -50, "boss", "#F0A", 3))
+
+    // cleanup lost enemies
+    enemies = enemies.filter(obsolet)
   }
 
   function doKeyDown(evt){
@@ -69,6 +79,9 @@ function run(ctx) {
   }
 
   function render() {
+    lvlIndicator.innerHTML = lvl
+    enemyIndicator.innerHTML = enemies.length
+
     ctx.clearRect(0,0,640,480)
     for(i in enemies) {
       enemies[i].y += 2.0 / enemies[i].multiplicator
@@ -77,9 +90,12 @@ function run(ctx) {
     draw_player(player)
   }
 
+  function raiseLevel() { lvl++ }
+
   ctx.globalCompositeOperation = 'destination-over'
   window.addEventListener('keydown', doKeyDown, false)
-  setInterval(generateEnemies, 1000)
-  setInterval(render, 20)
+  enemyInterval = setInterval(generateEnemies, 2000 - lvl*100)
+  renderInterval = setInterval(render, 20)
+  raiseLevelInterval = setInterval(raiseLevel, 10000)
 }
 
