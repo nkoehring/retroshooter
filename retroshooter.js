@@ -110,7 +110,6 @@ function run(ctx) {
     // cleanup lost enemies
     enemies = enemies.filter(obsolet_ship)
     // cleanup lost bullets
-    enemies = enemies.filter(obsolet_ship)
     projectiles = projectiles.filter(obsolet_projectile)
   }
 
