@@ -17,6 +17,11 @@ function Ship(x, y, name, colour, multiplicator) {
       this.hitpoints = 0
     }
   }
+
+  this.up    = function() { this.y -= 4 }
+  this.left  = function() { this.x -= 4 }
+  this.down  = function() { this.y += 4 }
+  this.right = function() { this.x += 4 }
 }
 
 
@@ -94,10 +99,10 @@ function run(ctx) {
   }
 
   function doKeyDown(evt){
-    if (evt.keyCode == 37) player.x -= 5  // left
-    if (evt.keyCode == 38) player.y -= 5  // up
-    if (evt.keyCode == 39) player.x += 5  // right
-    if (evt.keyCode == 40) player.y += 5  // down
+    if (evt.keyCode == 37) player.left()  // left
+    if (evt.keyCode == 38) player.up()    // up
+    if (evt.keyCode == 39) player.right() // right
+    if (evt.keyCode == 40) player.down()  // down
     if (evt.keyCode == 32) projectile("player")   //TODO: shoot!
   }
 
