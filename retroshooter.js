@@ -65,6 +65,7 @@ function run(ctx) {
       enemyIndicator = document.getElementById('enemies'),
       projectileIndicator = document.getElementById('projectiles'),
       projectileBaseSize = 5,
+      projectileTreshold = 20,
       playerBaseSize = 15,
       enemyBaseSize = 20
 
@@ -77,10 +78,11 @@ function run(ctx) {
   }
 
   function projectile(owner) {
-    var x = player.x,
-        y = player.y
-
-    projectiles.push({owner: owner, x: x, y: y})
+    if(projectiles.length <= projectileTreshold) {
+      var x = player.x,
+          y = player.y
+      projectiles.push({owner: owner, x: x, y: y})
+    }
   }
 
   function generateEnemies() {
@@ -101,6 +103,8 @@ function run(ctx) {
 
   function cleanup() {
     // cleanup lost enemies
+    enemies = enemies.filter(obsolet_ship)
+    // cleanup lost bullets
     enemies = enemies.filter(obsolet_ship)
     projectiles = projectiles.filter(obsolet_projectile)
   }
