@@ -18,10 +18,10 @@ function Ship(x, y, name, colour, multiplicator) {
     }
   }
 
-  this.up    = function() { this.y -= 4 }
-  this.left  = function() { this.x -= 4 }
-  this.down  = function() { this.y += 4 }
-  this.right = function() { this.x += 4 }
+  this.up    = function() {if(this.y > 20) this.y -= 4 }
+  this.left  = function() {if(this.x > 4) this.x -= 4 }
+  this.down  = function() {if(this.y < 476) this.y += 4 }
+  this.right = function() {if(this.x < 396) this.x += 4 }
 }
 
 
