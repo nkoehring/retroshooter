@@ -1,4 +1,23 @@
-function Ship(x, y, name, colour, multiplicator) {
+function Projectile(x, y, strength, owner) {
+  this.x = x || 0
+  this.y = y || 0
+  this.strength = strength || 5
+  this.owner = owner || "player"
+  this.destroyed = false
+  this.direction = 1  // can be -1 for enemy projectiles
+
+  this.boundaries = function() {
+    r = strength / 2.0
+    return {
+      x: x - r,
+      y: y - r,
+      x2: x + r,
+      y2: y + r
+    }
+  }
+}
+
+function Ship(x, y, name, colour, multiplicator, baseSize) {
   if ( !(this instanceof Ship) ) return new Ship()
 
   this.x = x || 0
@@ -8,12 +27,36 @@ function Ship(x, y, name, colour, multiplicator) {
   this.multiplicator = multiplicator || 1
   this.baseHitpoints = 100 * this.multiplicator
   this.hitpoints = this.baseHitpoints
-  this.dead = 0
+  this.destroyed = false
+  this.baseSize = (20 || baseSize) * this.multiplicator
+  this.boundaries = function() {
+    return {
+      x: this.x,
+      y: this.y,
+      x2: this.x + this.baseSize,
+      y2: this.y + this.baseSize
+    }
+  }
+  this.collides_with = function(boundaries) {
+    var own_boundaries = this.boundaries(),
+        left1 = own_boundaries.x,
+        left2 = boundaries.x,
+        right1 = own_boundaries.x2,
+        right2 = boundaries.x2,
+        top1 = own_boundaries.y,
+        top2 = boundaries.y,
+        bottom1 = own_boundaries.y2,
+        bottom2 = boundaries.y2
+
+    if(right1 < left2 || left1 > right2) return false
+    if(bottom1 < top2 || top1 > bottom2) return false
+    return true
+  }
 
   this.hit = function(points) {
     this.hitpoints -= points
     if (this.hitpoints <= 0) {
-      this.dead = 1
+      this.destroyed = true
       this.hitpoints = 0
     }
   }
@@ -25,68 +68,69 @@ function Ship(x, y, name, colour, multiplicator) {
 }
 
 
-function draw_enemy(ship, baseSize) {
-  var baseSize = baseSize * ship.multiplicator
-
+function draw_enemy(ship) {
   ctx.globalAlpha = ship.hitpoints*1.0 / ship.baseHitpoints
   ctx.fillStyle = ship.colour
+  ctx.strokeStyle = ship.colour
   ctx.beginPath()
   ctx.moveTo(ship.x, ship.y)
-  ctx.lineTo(ship.x + baseSize, ship.y)
-  ctx.lineTo(ship.x + baseSize/2, ship.y + baseSize)
+  ctx.lineTo(ship.x + ship.baseSize, ship.y)
+  ctx.lineTo(ship.x + ship.baseSize/2.0, ship.y + ship.baseSize)
   ctx.closePath()
   ctx.fill()
+  ctx.globalAlpha = 1.0
+  ctx.stroke()
 }
 
-function draw_projectile(projectile, baseSize) {
+function draw_projectile(projectile) {
   ctx.globalAlpha = 1.0
   ctx.fillStyle = "#FF0"
   ctx.beginPath()
-  ctx.arc(projectile.x, projectile.y, baseSize, 0, Math.PI*2, true)
-  ctx.closePath()
+  ctx.arc(projectile.x, projectile.y, projectile.strength, 0, Math.PI*2, true)
   ctx.fill()
 }
 
-function draw_player(ship, baseSize) {
-  ctx.globalAlpha = 1.0
-  ctx.fillStyle = "#0F0"
+function draw_player(ship) {
+  ctx.globalAlpha = ship.hitpoints*1.0 / ship.baseHitpoints
+  ctx.fillStyle = ship.colour
+  ctx.strokeStyle = ship.colour
   ctx.beginPath();  
   ctx.arc(
     ship.x , ship.y,
-    baseSize,
+    ship.baseSize,
     Math.PI*0.5+0.8, Math.PI*0.5-0.8,
     false
-  );  
+  );
   ctx.closePath()
   ctx.fill();  
+  ctx.globalAlpha = 1.0
+  ctx.stroke()
 }
 
 function run(ctx) {
-  var enemies = [],
-      projectiles = [],
-      player = new Ship(200, 470, "player"),
-      lvl = 0,
+  var lvl = 0,
       lvlIndicator = document.getElementById('level'),
-      enemyIndicator = document.getElementById('enemies'),
-      projectileIndicator = document.getElementById('projectiles'),
+      hitpointIndicator = document.getElementById('hitpoints'),
       projectileBaseSize = 5,
       projectileTreshold = 20,
       playerBaseSize = 15,
-      enemyBaseSize = 20
+      enemyBaseSize = 20,
+      enemies = [],
+      projectiles = [],
+      player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
 
   function obsolet_ship(element, index, array) {
-    return (element.y <= 480);
+    return (element.y <= 480 && !element.destroyed)
   }
 
   function obsolet_projectile(element, index, array) {
-    return (element.y >= 0);
+    return (element.y >= 0 && !element.destroyed)
   }
 
-  function projectile(owner) {
+  function generateProjectile(owner) {
     if(projectiles.length <= projectileTreshold) {
-      var x = player.x,
-          y = player.y
-      projectiles.push({owner: owner, x: x, y: y})
+      projectile = new Projectile(owner.x, owner.y, 5, owner)
+      projectiles.push(projectile)
     }
   }
 
@@ -108,7 +152,7 @@ function run(ctx) {
       var r = Math.random()
       var x = Math.random()*400 % 380
       if (r > 0.1) enemies.push(new Ship(x, -20))
-      else enemies.push(new Ship(x, -50, "boss", "#F0A", 3))
+      else enemies.push(new Ship(x, -50, "boss", "#F50", 3))
     }
     setTimeout(generateEnemies, time)
   }
@@ -118,7 +162,7 @@ function run(ctx) {
     if (evt.keyCode == 38) player.up()    // up
     if (evt.keyCode == 39) player.right() // right
     if (evt.keyCode == 40) player.down()  // down
-    if (evt.keyCode == 32) projectile("player")   //TODO: shoot!
+    if (evt.keyCode == 32) generateProjectile(player)   // shoot!
   }
 
   function cleanup() {
@@ -129,23 +173,48 @@ function run(ctx) {
   }
 
   function collison_detection() {
-    // TODO: implement me!
+    for(i in enemies) {
+      enemy = enemies[i]
+
+      // look for projectiles hitting enemies
+      for(i in projectiles) {
+        projectile = projectiles[i]
+        boundaries = {
+          x: projectile.x,
+          y: projectile.y,
+          x2: projectile.x,
+          y2: projectile.y
+        }
+        if(enemy.collides_with(boundaries)) {
+          enemy.hit(projectile.strength)
+          projectile.destroyed = true
+        }
+      }
+
+      // look for enemies hitting the player
+      if(enemy.collides_with(player.boundaries())) {
+        enemy.hit(100)
+        player.hit(5)
+      }
+    }
   }
 
   function render() {
     lvlIndicator.innerHTML = lvl
-    enemyIndicator.innerHTML = enemies.length
-    projectileIndicator.innerHTML = projectiles.length
+    hitpointIndicator.innerHTML = player.hitpoints
 
     ctx.clearRect(0,0,640,480)
+
+    // TODO: should be way faster to draw every ship type once and just copy it
     for(i in enemies) {
-      draw_enemy(enemies[i], enemyBaseSize)
+      draw_enemy(enemies[i])
       enemies[i].y += 2.0 / enemies[i].multiplicator
     }
-    draw_player(player, playerBaseSize)
+
+    draw_player(player)
     for(i in projectiles) {
-      draw_projectile(projectiles[i], projectileBaseSize)
-      projectiles[i].y -= 4.0
+      draw_projectile(projectiles[i])
+      projectiles[i].y -= (4.0 * projectiles[i].direction)
     }
 
     cleanup()
