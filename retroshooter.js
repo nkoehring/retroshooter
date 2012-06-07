@@ -106,21 +106,19 @@ function run(ctx) {
   var lvl = 0,
       lvlIndicator = document.getElementById('level'),
       hitpointIndicator = document.getElementById('hitpoints'),
+      keysIndicator = document.getElementById('keys'),
+      keyLeftPressed = false,
+      keyRightPressed = false,
+      keyUpPressed = false,
+      keyDownPressed = false,
+      keySpacePressed = false,
       projectileBaseSize = 5,
       projectileTreshold = 20,
       playerBaseSize = 15,
       enemyBaseSize = 20,
       enemies = [],
       projectiles = [],
-      player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize),
-      keyMapping = {
-        37: "player.acceleration.h-=4",    // left
-        38: "player.acceleration.v-=4",    // up
-        39: "player.acceleration.h+=4",    // right
-        40: "player.acceleration.v+=4",    // down
-        32: "generateProjectile(player)"  // shoot!
-        //80: "pause()"
-      }
+      player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
 
   player.acceleration = {h:0, v:0}
 
@@ -163,12 +161,23 @@ function run(ctx) {
     setTimeout(generateEnemies, time)
   }
 
-  function doKeyDown(evt){
-    if (!(evt.keyCode in keyMapping)) return
-
-    evt.preventDefault()
-    eval(keyMapping[evt.keyCode])  // oh damn, use function.call or something!
+  function doKeyDown(evt) {
+    if (evt.keyCode == 37) keyLeftPressed = true
+    if (evt.keyCode == 39) keyRightPressed = true
+    if (evt.keyCode == 38) keyUpPressed = true
+    if (evt.keyCode == 40) keyDownPressed = true
+    if (evt.keyCode == 32) keySpacePressed = true
+    //if (evt.keyCode == 80) is_paused = !is_paused   // P → Pause
   }
+
+  function doKeyUp(evt) {
+    if (evt.keyCode == 37) keyLeftPressed = false
+    if (evt.keyCode == 39) keyRightPressed = false
+    if (evt.keyCode == 38) keyUpPressed = false
+    if (evt.keyCode == 40) keyDownPressed = false
+    if (evt.keyCode == 32) keySpacePressed = false
+  }
+
 
   function cleanup() {
     // cleanup lost enemies
@@ -191,7 +200,7 @@ function run(ctx) {
           y2: projectile.y
         }
         if(enemy.collides_with(boundaries)) {
-          enemy.hit(projectile.strength)
+          enemy.hit(projectile.strength*5)
           projectile.destroyed = true
         }
       }
@@ -199,14 +208,26 @@ function run(ctx) {
       // look for enemies hitting the player
       if(enemy.collides_with(player.boundaries())) {
         enemy.hit(100)
-        player.hit(5)
+        player.hit(25)
       }
     }
   }
 
   function calc_player_acceleration() {
+    if(keyLeftPressed) player.acceleration.h-=4    // left
+    if(keyUpPressed) player.acceleration.v-=4      // up
+    if(keyRightPressed) player.acceleration.h+=4   // right
+    if(keyDownPressed) player.acceleration.v+=4    // down
+    if(keySpacePressed) generateProjectile(player) // shoot!
+
     h = player.acceleration.h
     v = player.acceleration.v
+
+    if(h > 50)  h = 50
+    if(h < -50) h =- 50
+    if(v > 50)  v = 50
+    if(v < -50) v =- 50
+
     player.x += h/10.0
     player.y += v/10.0
     
@@ -244,15 +265,16 @@ function run(ctx) {
 
     cleanup()
     collison_detection()
-    calc_player_acceleration()
   }
 
   function raiseLevel() { lvl++ }
 
   ctx.globalCompositeOperation = 'destination-over'
   window.addEventListener('keydown', doKeyDown, false)
+  window.addEventListener('keyup', doKeyUp, false)
   window.enemyInterval = setTimeout(generateEnemies, 2000)
   window.renderInterval = setInterval(render, 20)
   window.raiseLevelInterval = setInterval(raiseLevel, 10000)
+  window.movementInterval = setInterval(calc_player_acceleration, 50)
 }
 
