@@ -60,11 +60,6 @@ function Ship(x, y, name, colour, multiplicator, baseSize) {
       this.hitpoints = 0
     }
   }
-
-  this.up    = function() {if(this.y > 20) this.y -= 4 }
-  this.left  = function() {if(this.x > 4) this.x -= 4 }
-  this.down  = function() {if(this.y < 476) this.y += 4 }
-  this.right = function() {if(this.x < 396) this.x += 4 }
 }
 
 
@@ -117,7 +112,18 @@ function run(ctx) {
       enemyBaseSize = 20,
       enemies = [],
       projectiles = [],
-      player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
+      player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize),
+      keyMapping = {
+        37: "player.acceleration.h-=4",    // left
+        38: "player.acceleration.v-=4",    // up
+        39: "player.acceleration.h+=4",    // right
+        40: "player.acceleration.v+=4",    // down
+        32: "generateProjectile(player)"  // shoot!
+        //80: "pause()"
+      }
+
+  player.acceleration = {h:0, v:0}
+
 
   function obsolet_ship(element, index, array) {
     return (element.y <= 480 && !element.destroyed)
@@ -158,11 +164,10 @@ function run(ctx) {
   }
 
   function doKeyDown(evt){
-    if (evt.keyCode == 37) player.left()  // left
-    if (evt.keyCode == 38) player.up()    // up
-    if (evt.keyCode == 39) player.right() // right
-    if (evt.keyCode == 40) player.down()  // down
-    if (evt.keyCode == 32) generateProjectile(player)   // shoot!
+    if (!(evt.keyCode in keyMapping)) return
+
+    evt.preventDefault()
+    eval(keyMapping[evt.keyCode])  // oh damn, use function.call or something!
   }
 
   function cleanup() {
@@ -199,9 +204,29 @@ function run(ctx) {
     }
   }
 
+  function calc_player_acceleration() {
+    h = player.acceleration.h
+    v = player.acceleration.v
+    player.x += h/10.0
+    player.y += v/10.0
+    
+    if(player.x < 4) player.x = 4
+    if(player.x > 396) player.x = 396
+    if(player.y < 20) player.y = 20
+    if(player.y > 476) player.y = 476
+
+    if(h != 0) h<0 ? h++ : h--
+    if(v != 0) v<0 ? v++ : v--
+
+    player.acceleration.h = h
+    player.acceleration.v = v
+  }
+
   function render() {
     lvlIndicator.innerHTML = lvl
     hitpointIndicator.innerHTML = player.hitpoints
+    hAccelIndicator.innerHTML = player.acceleration.h
+    vAccelIndicator.innerHTML = player.acceleration.v
 
     ctx.clearRect(0,0,640,480)
 
@@ -219,14 +244,15 @@ function run(ctx) {
 
     cleanup()
     collison_detection()
+    calc_player_acceleration()
   }
 
   function raiseLevel() { lvl++ }
 
   ctx.globalCompositeOperation = 'destination-over'
   window.addEventListener('keydown', doKeyDown, false)
-  enemyInterval = setTimeout(generateEnemies, 2000)
-  renderInterval = setInterval(render, 20)
-  raiseLevelInterval = setInterval(raiseLevel, 10000)
+  window.enemyInterval = setTimeout(generateEnemies, 2000)
+  window.renderInterval = setInterval(render, 20)
+  window.raiseLevelInterval = setInterval(raiseLevel, 10000)
 }
 
