@@ -29,6 +29,7 @@ function Ship(x, y, name, colour, multiplicator, baseSize) {
   this.hitpoints = this.baseHitpoints
   this.destroyed = false
   this.baseSize = (20 || baseSize) * this.multiplicator
+
   this.boundaries = function() {
     return {
       x: this.x,
@@ -37,6 +38,7 @@ function Ship(x, y, name, colour, multiplicator, baseSize) {
       y2: this.y + this.baseSize
     }
   }
+
   this.collides_with = function(boundaries) {
     var own_boundaries = this.boundaries(),
         left1 = own_boundaries.x,
@@ -59,7 +61,10 @@ function Ship(x, y, name, colour, multiplicator, baseSize) {
       this.destroyed = true
       this.hitpoints = 0
     }
+    this.redraw()
   }
+
+  this.redraw = function() { /* empty for now */ }
 }
 
 
@@ -77,51 +82,61 @@ function draw_enemy(ship) {
   ctx.stroke()
 }
 
-function draw_projectile(projectile) {
-  ctx.globalAlpha = 1.0
-  ctx.fillStyle = "#FF0"
-  ctx.beginPath()
-  ctx.arc(projectile.x, projectile.y, projectile.strength, 0, Math.PI*2, true)
-  ctx.fill()
-}
-
-function draw_player(ship) {
-  ctx.globalAlpha = ship.hitpoints*1.0 / ship.baseHitpoints
-  ctx.fillStyle = ship.colour
-  ctx.strokeStyle = ship.colour
-  ctx.beginPath();  
-  ctx.arc(
-    ship.x , ship.y,
-    ship.baseSize,
-    Math.PI*0.5+0.8, Math.PI*0.5-0.8,
-    false
-  );
-  ctx.closePath()
-  ctx.fill();  
-  ctx.globalAlpha = 1.0
-  ctx.stroke()
-}
-
 function run(ctx) {
   var lvl = 0,
+      cycle = 0,
+      msec_frame = 33,
+      render_time = 0,
+      enemyGenerationTime = 60,  // 60 frames = 2 seconds at 30FPS
+      enemyTimeReducePerLevel = 3, // 3 frames => 0.1 second at 30FPS
+
       lvlIndicator = document.getElementById('level'),
       hitpointIndicator = document.getElementById('hitpoints'),
-      keysIndicator = document.getElementById('keys'),
+      fpsIndicator = document.getElementById('fps'),
+
       keyLeftPressed = false,
       keyRightPressed = false,
       keyUpPressed = false,
       keyDownPressed = false,
       keySpacePressed = false,
+      isPaused = false,
+
       projectileBaseSize = 5,
-      projectileTreshold = 20,
+      projectileTreshold = 200,
       playerBaseSize = 15,
       enemyBaseSize = 20,
+
       enemies = [],
       projectiles = [],
       player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
 
   player.acceleration = {h:0, v:0}
+  draw_player()
 
+  function draw_projectile(projectile) {
+    ctx.globalAlpha = 1.0
+    ctx.fillStyle = "#FF0"
+    ctx.beginPath()
+    ctx.arc(projectile.x, projectile.y, projectile.strength, 0, Math.PI*2, true)
+    ctx.fill()
+  }
+
+  function draw_player() {
+    ctx.globalAlpha = player.hitpoints*1.0 / player.baseHitpoints
+    ctx.fillStyle = player.colour
+    ctx.strokeStyle = player.colour
+    ctx.beginPath();  
+    ctx.arc(
+      player.x , player.y,
+      player.baseSize,
+      Math.PI*0.5+0.8, Math.PI*0.5-0.8,
+      false
+    );
+    ctx.closePath()
+    ctx.fill();  
+    ctx.globalAlpha = 1.0
+    ctx.stroke()
+  }
 
   function obsolet_ship(element, index, array) {
     return (element.y <= 480 && !element.destroyed)
@@ -145,20 +160,15 @@ function run(ctx) {
    * The decade is used for the number of ships generated each cycle.
    * The units are used to calculate the time until the next cycle.
    */
-  function generateEnemies() {
-    var r, x,
-        decade = Math.floor(lvl/10) + 1
-        units = (lvl % 10)
-        count = decade
-        time = 2000 - units*100  // slow at the beginning, fast at the end
+  function generateEnemies(count) {
+    var r, x
 
     for(;count;count--) {
       var r = Math.random()
       var x = Math.random()*400 % 380
-      if (r > 0.1) enemies.push(new Ship(x, -20))
+      if (r > 0.1) enemies.push(new Ship(x, -20+r))
       else enemies.push(new Ship(x, -50, "boss", "#F50", 3))
     }
-    setTimeout(generateEnemies, time)
   }
 
   function doKeyDown(evt) {
@@ -167,7 +177,7 @@ function run(ctx) {
     if (evt.keyCode == 38) keyUpPressed = true
     if (evt.keyCode == 40) keyDownPressed = true
     if (evt.keyCode == 32) keySpacePressed = true
-    //if (evt.keyCode == 80) is_paused = !is_paused   // P → Pause
+    if (evt.keyCode == 80) isPaused = !isPaused   // P → Pause
   }
 
   function doKeyUp(evt) {
@@ -244,27 +254,57 @@ function run(ctx) {
   }
 
   function render() {
-    lvlIndicator.innerHTML = lvl
-    hitpointIndicator.innerHTML = player.hitpoints
-    hAccelIndicator.innerHTML = player.acceleration.h
-    vAccelIndicator.innerHTML = player.acceleration.v
+    var d = new Date()
+    var start_time = d.getTime()
 
-    ctx.clearRect(0,0,640,480)
+    if(!isPaused) {
+      ctx.clearRect(0,0,640,480)
 
-    // TODO: should be way faster to draw every ship type once and just copy it
-    for(i in enemies) {
-      draw_enemy(enemies[i])
-      enemies[i].y += 2.0 / enemies[i].multiplicator
+      // TODO: should be way faster to draw every ship type once and just copy it
+      for(i in enemies) {
+        draw_enemy(enemies[i])
+        enemies[i].y += 2.0 / enemies[i].multiplicator
+      }
+
+      for(i in projectiles) {
+        draw_projectile(projectiles[i])
+        projectiles[i].y -= (4.0 * projectiles[i].direction)
+      }
+
+      calc_player_acceleration()
+      draw_player()
+
+      if(cycle%2 == 0) {
+        cleanup()
+        collison_detection()
+      }
+
+      if(cycle%10 == 0) {
+        lvlIndicator.innerHTML = lvl
+        hitpointIndicator.innerHTML = player.hitpoints
+        if(render_time > msec_frame) fps = Math.round(1000.0/render_time)
+        else fps = 30
+        fpsIndicator.innerHTML = fps
+      }
+
+      // calculate enemies
+      decade = Math.floor(lvl/10) + 1
+      units = (lvl % 10)
+      modulo = enemyGenerationTime - enemyTimeReducePerLevel*units
+      if(cycle%modulo == 0) generateEnemies(decade)
+
+      // raise level every 303 frames (~10 seconds)
+      if(cycle%303 == 0) raiseLevel()
     }
 
-    draw_player(player)
-    for(i in projectiles) {
-      draw_projectile(projectiles[i])
-      projectiles[i].y -= (4.0 * projectiles[i].direction)
-    }
+    cycle++
 
-    cleanup()
-    collison_detection()
+    d = new Date();
+    render_time = d.getTime() - start_time
+    if (render_time >= msec_frame) time_diff = 0
+    else time_diff = msec_frame - render_time
+          
+    t = setTimeout(render, time_diff)
   }
 
   function raiseLevel() { lvl++ }
@@ -272,9 +312,6 @@ function run(ctx) {
   ctx.globalCompositeOperation = 'destination-over'
   window.addEventListener('keydown', doKeyDown, false)
   window.addEventListener('keyup', doKeyUp, false)
-  window.enemyInterval = setTimeout(generateEnemies, 2000)
-  window.renderInterval = setInterval(render, 20)
-  window.raiseLevelInterval = setInterval(raiseLevel, 10000)
-  window.movementInterval = setInterval(calc_player_acceleration, 50)
+  render()
 }
 
