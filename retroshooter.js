@@ -102,13 +102,13 @@ function run(ctx) {
       isPaused = false,
 
       projectileBaseSize = 5,
-      projectileMaximum = 50,
       projectileCooldownSingle = 6,
 
       playerBaseSize = 15,
       enemyBaseSize = 20,
 
       playerHeat = 0,
+      heatMaximum = 50,
       enemies = [],
       projectiles = [],
       player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
@@ -225,10 +225,10 @@ function run(ctx) {
   }
 
   function calc_player_acceleration() {
-    if(keyLeftPressed) player.acceleration.h-=4    // left
-    if(keyUpPressed) player.acceleration.v-=4      // up
-    if(keyRightPressed) player.acceleration.h+=4   // right
-    if(keyDownPressed) player.acceleration.v+=4    // down
+    if(keyLeftPressed) player.acceleration.h-=6    // left
+    if(keyUpPressed) player.acceleration.v-=6      // up
+    if(keyRightPressed) player.acceleration.h+=6   // right
+    if(keyDownPressed) player.acceleration.v+=6    // down
 
     h = player.acceleration.h
     v = player.acceleration.v
@@ -268,16 +268,16 @@ function run(ctx) {
 
       for(i in projectiles) {
         draw_projectile(projectiles[i])
-        projectiles[i].y -= (4.0 * projectiles[i].direction)
+        projectiles[i].y -= (8.0 * projectiles[i].direction)
       }
 
       calc_player_acceleration()
       draw_player()
 
       if(keySpacePressed) {
-        if(cycle % projectileCooldownSingle == 0) {
+        if(cycle % projectileCooldownSingle == 0 && playerHeat < heatMaximum) {
           generateProjectile(player) // shoot!
-          if(playerHeat < projectileMaximum) playerHeat++
+          if(playerHeat < heatMaximum) playerHeat++
         }
       }
 
@@ -296,8 +296,8 @@ function run(ctx) {
       }
       // heat
       if(playerHeat > 0 && cycle%20 == 0) playerHeat--
-      ctx.strokeRect(380, 10, 10, projectileMaximum)
-      ctx.fillRect(380, 10+projectileMaximum-playerHeat, 10, playerHeat)
+      ctx.strokeRect(380, 10, 10, heatMaximum)
+      ctx.fillRect(380, 10+heatMaximum-playerHeat, 10, playerHeat)
 
       // calculate enemies
       decade = Math.floor(lvl/10) + 1
