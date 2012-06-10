@@ -141,6 +141,16 @@ function run(ctx) {
     ctx.stroke()
   }
 
+  function draw_heat() {
+    var r, g = 0
+    r = Math.round(255.0/heatMaximum*playerHeat)
+    g = 255 - Math.round(255.0/heatMaximum*playerHeat)
+    ctx.fillStyle = "rgb("+r+", "+g+", 0)"
+
+    ctx.strokeRect(380, 10, 10, heatMaximum)
+    ctx.fillRect(380, 10+heatMaximum-playerHeat, 10, playerHeat)
+  }
+
   function obsolet_ship(element, index, array) {
     return (element.y <= 480 && !element.destroyed)
   }
@@ -296,8 +306,7 @@ function run(ctx) {
       }
       // heat
       if(playerHeat > 0 && cycle%20 == 0) playerHeat--
-      ctx.strokeRect(380, 10, 10, heatMaximum)
-      ctx.fillRect(380, 10+heatMaximum-playerHeat, 10, playerHeat)
+      draw_heat()
 
       // calculate enemies
       decade = Math.floor(lvl/10) + 1
