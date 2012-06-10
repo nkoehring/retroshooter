@@ -109,6 +109,7 @@ function run(ctx) {
 
       playerHeat = 0,
       heatMaximum = 50,
+      points = 0,
       enemies = [],
       projectiles = [],
       player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
@@ -147,8 +148,26 @@ function run(ctx) {
     g = 255 - Math.round(255.0/heatMaximum*playerHeat)
     ctx.fillStyle = "rgb("+r+", "+g+", 0)"
 
-    ctx.strokeRect(380, 10, 10, heatMaximum)
-    ctx.fillRect(380, 10+heatMaximum-playerHeat, 10, playerHeat)
+    ctx.strokeRect(385, 20, 10, heatMaximum)
+    ctx.fillRect(385, 20+heatMaximum-playerHeat, 10, playerHeat)
+  }
+
+  function draw_info() {
+    var oldFont = ctx.font
+    var fps = 0
+
+    if(render_time > msec_frame) fps = Math.round(1000.0/render_time)
+    else fps = 30
+
+    ctx.fillStyle = "#00FF00"
+    ctx.font = "20px sans"
+    ctx.fillText(lvl, 15, 20)
+    ctx.font = "12px sans"
+    ctx.fillText(player.hitpoints, 5, 40)
+    ctx.fillText(points, 5, 60)
+    ctx.fillText(fps, 380, 10)
+
+    ctx.font = oldFont
   }
 
   function obsolet_ship(element, index, array) {
@@ -223,6 +242,7 @@ function run(ctx) {
         if(enemy.collides_with(boundaries)) {
           enemy.hit(projectile.strength*5)
           projectile.destroyed = true
+          points++
         }
       }
 
@@ -296,17 +316,10 @@ function run(ctx) {
         collison_detection()
       }
 
-      // draw status information every 10th cycle (around 3x per second)
-      if(cycle%10 == 0) {
-        lvlIndicator.innerHTML = lvl
-        hitpointIndicator.innerHTML = player.hitpoints
-        if(render_time > msec_frame) fps = Math.round(1000.0/render_time)
-        else fps = 30
-        fpsIndicator.innerHTML = fps
-      }
       // heat
       if(playerHeat > 0 && cycle%20 == 0) playerHeat--
       draw_heat()
+      draw_info()
 
       // calculate enemies
       decade = Math.floor(lvl/10) + 1
