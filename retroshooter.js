@@ -102,10 +102,13 @@ function run(ctx) {
       isPaused = false,
 
       projectileBaseSize = 5,
-      projectileTreshold = 200,
+      projectileMaximum = 50,
+      projectileCooldownSingle = 6,
+
       playerBaseSize = 15,
       enemyBaseSize = 20,
 
+      playerHeat = 0,
       enemies = [],
       projectiles = [],
       player = new Ship(200, 470, "player", "#0F0", 1.0, playerBaseSize)
@@ -147,10 +150,8 @@ function run(ctx) {
   }
 
   function generateProjectile(owner) {
-    if(projectiles.length <= projectileTreshold) {
-      projectile = new Projectile(owner.x, owner.y, 5, owner)
-      projectiles.push(projectile)
-    }
+    projectile = new Projectile(owner.x, owner.y, 5, owner)
+    projectiles.push(projectile)
   }
 
   /**
@@ -228,7 +229,6 @@ function run(ctx) {
     if(keyUpPressed) player.acceleration.v-=4      // up
     if(keyRightPressed) player.acceleration.h+=4   // right
     if(keyDownPressed) player.acceleration.v+=4    // down
-    if(keySpacePressed) generateProjectile(player) // shoot!
 
     h = player.acceleration.h
     v = player.acceleration.v
@@ -257,7 +257,7 @@ function run(ctx) {
     var d = new Date()
     var start_time = d.getTime()
 
-    if(!isPaused) {
+    if(!isPaused && !player.destroyed) {
       ctx.clearRect(0,0,640,480)
 
       // TODO: should be way faster to draw every ship type once and just copy it
@@ -274,11 +274,19 @@ function run(ctx) {
       calc_player_acceleration()
       draw_player()
 
+      if(keySpacePressed) {
+        if(cycle % projectileCooldownSingle == 0) {
+          generateProjectile(player) // shoot!
+          if(playerHeat < projectileMaximum) playerHeat++
+        }
+      }
+
       if(cycle%2 == 0) {
         cleanup()
         collison_detection()
       }
 
+      // draw status information every 10th cycle (around 3x per second)
       if(cycle%10 == 0) {
         lvlIndicator.innerHTML = lvl
         hitpointIndicator.innerHTML = player.hitpoints
@@ -286,6 +294,10 @@ function run(ctx) {
         else fps = 30
         fpsIndicator.innerHTML = fps
       }
+      // heat
+      if(playerHeat > 0 && cycle%20 == 0) playerHeat--
+      ctx.strokeRect(380, 10, 10, projectileMaximum)
+      ctx.fillRect(380, 10+projectileMaximum-playerHeat, 10, playerHeat)
 
       // calculate enemies
       decade = Math.floor(lvl/10) + 1
@@ -295,6 +307,11 @@ function run(ctx) {
 
       // raise level every 303 frames (~10 seconds)
       if(cycle%303 == 0) raiseLevel()
+    }
+
+    if(player.destroyed) {
+      ctx.clearRect(0,0,640,480)
+      ctx.strokeText("GAME OVER", 20, 200)
     }
 
     cycle++
