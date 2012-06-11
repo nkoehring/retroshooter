@@ -83,7 +83,7 @@ function draw_enemy(ship) {
 }
 
 function run(ctx) {
-  var lvl = 0,
+  var lvl = 20,
       cycle = 0,
       msec_frame = 33,
       render_time = 0,
@@ -240,7 +240,7 @@ function run(ctx) {
           y2: projectile.y
         }
         if(enemy.collides_with(boundaries)) {
-          enemy.hit(projectile.strength*5)
+          enemy.hit(projectile.strength*20)
           projectile.destroyed = true
           points++
         }
@@ -255,10 +255,10 @@ function run(ctx) {
   }
 
   function calc_player_acceleration() {
-    if(keyLeftPressed) player.acceleration.h-=6    // left
-    if(keyUpPressed) player.acceleration.v-=6      // up
-    if(keyRightPressed) player.acceleration.h+=6   // right
-    if(keyDownPressed) player.acceleration.v+=6    // down
+    if(keyLeftPressed) player.acceleration.h-=15    // left
+    if(keyUpPressed) player.acceleration.v-=15      // up
+    if(keyRightPressed) player.acceleration.h+=15   // right
+    if(keyDownPressed) player.acceleration.v+=15    // down
 
     h = player.acceleration.h
     v = player.acceleration.v
@@ -276,8 +276,8 @@ function run(ctx) {
     if(player.y < 20) player.y = 20
     if(player.y > 476) player.y = 476
 
-    if(h != 0) h<0 ? h++ : h--
-    if(v != 0) v<0 ? v++ : v--
+    if(h != 0) h<0 ? h+=4 : h-=4
+    if(v != 0) v<0 ? v+=4 : v-=4
 
     player.acceleration.h = h
     player.acceleration.v = v
